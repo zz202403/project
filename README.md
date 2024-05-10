@@ -1,4 +1,4 @@
-# project
+# Project
 HW6
 
 ## Objective
