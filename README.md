@@ -7,14 +7,14 @@ The focus will be on using public data to explore the significance of "self-repo
 
 ## Data Source
 
-###Survey Data:
+### Survey Data:
 
 - Import the survey data from the 1999-2000 National Health and Nutrition Examination Survey (NHANES):
 ```stata
 import sasxport5 "https://wwwn.cdc.gov/Nchs/Nhanes/1999-2000/DEMO.XPT", clear
 ```
 
-###Mortality Follow-up Data:
+### Mortality Follow-up Data:
 Obtain follow-up mortality data to analyze over a 20-year period from the [National Center for Health Statistics (NCHS)](https://ftp.cdc.gov/pub/).
 - Health Statistics
   - NCHS
