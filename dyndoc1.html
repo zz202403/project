@@ -1,0 +1,386 @@
+<head>
+  <link rel="stylesheet" type="text/css" href="stmarkdown.css">
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+</script>
+<script type="text/javascript" async
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_CHTML">
+</script>
+</head>
+<h1><a href="#survival-analysis" id="survival-analysis">Survival Analysis</a></h1>
+<h2><a href="#non-parametric-and-semi-parametric-analysis" id="non-parametric-and-semi-parametric-analysis">Non-Parametric and Semi-Parametric Analysis</a></h2>
+<h3><a href="#xiyaozou" id="xiyaozou">Xiyao.Zou</a></h3>
+<p>Project Setup</p>
+<pre><code>. 
+. cls 
+
+. 
+. global repo &quot;https://github.com/jhustata/project/raw/main/&quot;
+
+. global nhanes &quot;https://wwwn.cdc.gov/Nchs/Nhanes/&quot;
+
+. 
+. 
+. do ${repo}followup.do
+
+. save followup, replace 
+
+. import sasxport5 &quot;${nhanes}1999-2000/DEMO.XPT&quot;, clear
+
+. merge 1:1 seqn using followup, nogen
+
+. save survey_followup, replace 
+
+. 
+. 
+. import sasxport5 &quot;${nhanes}1999-2000/HUQ.XPT&quot;, clear
+
+. tab huq010 
+
+. merge 1:1 seqn using survey_followup, nogen keep(matched)
+
+. rm followup.dta
+
+. rm survey_followup.dta
+
+. g years=permth_int/12
+
+. stset years, fail(mortstat)
+
+. replace huq010=. if huq010==9
+
+. label define huq 1 &quot;Excellent&quot; 2 &quot;Very Good&quot; 3 &quot;Good&quot; 4 &quot;Fair&quot; 
+&gt; 5 &quot;Poor&quot;
+
+. label values huq010 huq 
+
+. levelsof huq010, local(numlevels)
+
+. local i=1
+
+. foreach l of numlist `numlevels' {
+
+. save week7, replace 
+
+. sts graph, ///
+&gt;     by(huq010) ///
+&gt;         fail ///
+&gt;         per(100) ///
+&gt;         ylab(0(20)80 , ///
+&gt;             format(%2.0f) ///
+&gt;         ) ///
+&gt;         xlab(0(5)20) ///
+&gt;         tmax(20) ///
+&gt;         ti(&quot;Self-Reported Health and Mortality&quot;) ///
+&gt;         legend( ///
+&gt;             order(5 4 3 2 1) ///
+&gt;                 lab(1 &quot;$legend1&quot;) ///
+&gt;                 lab(2 &quot;$legend2&quot;) ///
+&gt;                 lab(3 &quot;$legend3&quot;) ///
+&gt;                 lab(4 &quot;$legend4&quot;) ///
+&gt;                 lab(5 &quot;$legend5&quot;) ///
+&gt;                 ring(0) pos(11) ///
+&gt;         )
+
+. graph export nonpara.png, replace 
+
+. 
+</code></pre>
+<p><img src="Graph.svg" ></p>
+<p><strong>semi-parametric</strong></p>
+<pre><code>. 
+. stcox i.huq010, basesurv(s0)
+
+        Failure _d: mortstat
+  Analysis time _t: years
+
+Iteration 0:  Log likelihood = -14053.711
+Iteration 1:  Log likelihood = -13842.257
+Iteration 2:  Log likelihood = -13815.469
+Iteration 3:  Log likelihood = -13815.219
+Iteration 4:  Log likelihood = -13815.219
+Refining estimates:
+Iteration 0:  Log likelihood = -13815.219
+
+Cox regression with Breslow method for ties
+
+No. of subjects =       5,436                           Number of
+&gt;  obs =  5,436
+No. of failures =       1,671
+Time at risk    = 91,679.7499
+                                                        LR chi2(4
+&gt; )    = 476.98
+Log likelihood = -13815.219                             Prob &gt; ch
+&gt; i2   = 0.0000
+
+-----------------------------------------------------------------
+&gt; -------------
+          _t | Haz. ratio   Std. err.      z    P&gt;|z|     [95% co
+&gt; n                                                              
+&gt;  f. interval]
+-------------+---------------------------------------------------
+&gt; -------------
+      huq010 |
+  Very Good  |   1.347475   .1251746     3.21   0.001     1.12317
+&gt; 6                                                              
+&gt;      1.616567
+       Good  |   1.880346   .1619641     7.33   0.000     1.58825
+&gt; 1                                                              
+&gt;      2.226159
+       Fair  |   2.985347   .2634849    12.39   0.000     2.51112
+&gt; 5                                                              
+&gt;      3.549126
+       Poor  |   7.475088   .7565146    19.88   0.000     6.13014
+&gt; 4                                                              
+&gt;      9.115111
+-----------------------------------------------------------------
+&gt; -------------
+
+. matrix define mat = r(table)
+
+. matrix list mat 
+
+mat[9,5]
+               1b.         2.         3.         4.         5.
+           huq010     huq010     huq010     huq010     huq010
+     b          1  1.3474753  1.8803457  2.9853475  7.4750881
+    se          .  .12517462  .16196412  .26348489  .75651458
+     z          .  3.2104048  7.3309743  12.392068  19.876295
+pvalue          .  .00132548  2.285e-13  2.885e-35  6.528e-88
+    ll          .  1.1231762  1.5882512  2.5111252  6.1301437
+    ul          .  1.6165672   2.226159  3.5491258  9.1151112
+    df          .          .          .          .          .
+  crit   1.959964   1.959964   1.959964   1.959964   1.959964
+ eform          1          1          1          1          1
+
+. matrix mat = mat'
+
+. svmat mat
+
+. preserve 
+
+. keep mat*
+
+. drop if missing(mat1)
+(9,960 observations deleted)
+
+. rename (mat1 mat2 mat3 mat4 mat5 mat6 mat7 mat8 mat9)(b se z p 
+&gt; ll ul df crit eform)
+
+. g x=_n
+
+. replace b=log(b)
+(5 real changes made)
+
+. replace ll=log(ll)
+(4 real changes made)
+
+. replace ul=log(ul)
+(4 real changes made)
+
+. twoway (scatter b x) || ///
+&gt;        (rcap ll ul x, ///
+&gt;                yline(0, lcol(lime)) ///
+&gt;                    ylab( ///
+&gt;                        -2.08 &quot;0.125&quot; ///
+&gt;                            -1.39 &quot;0.25&quot; ///
+&gt;                            -.69 &quot;0.5&quot; ///
+&gt;                              0 &quot;1&quot;  ///
+&gt;                            .69 &quot;2&quot; ///
+&gt;                            1.39 &quot;4&quot; ///
+&gt;                            2.08 &quot;8&quot; ///
+&gt;                            2.78 &quot;16&quot;) ///
+&gt;                    legend(off)  ///
+&gt;                 xlab( ///
+&gt;            1 &quot;$legend1&quot; ///
+&gt;                    2 &quot;$legend2&quot; ///
+&gt;                    3 &quot;$legend3&quot; ///
+&gt;                    4 &quot;$legend4&quot; ///
+&gt;                    5 &quot;$legend5&quot;) ///
+&gt;            xti(&quot;Self-Reported Health&quot;) ///
+&gt;                    ) 
+
+. graph export semipara_unadj.png, replace 
+(file semipara_unadj.png not found)
+file semipara_unadj.png saved as PNG format
+
+. graph save semipara_unadj.gph, replace 
+(file semipara_unadj.gph not found)
+file semipara_unadj.gph saved
+
+. restore 
+
+. 
+. 
+</code></pre>
+<p><img src="Graph1.svg" ></p>
+<p><strong>Inference</strong></p>
+<pre><code>. 
+. hist ridageyr 
+
+. graph export nonpara.png, replace 
+
+. //replace ridageyr=ridageyr/10
+. capture drop s0 
+
+. stcox i.huq010 ridageyr riagendr, basesurv(s0)
+
+. return list
+
+. matrix define mat_adj=r(table)
+
+. matrix define mat_adj=mat_adj'
+
+. matrix list mat_adj
+
+. svmat mat_adj
+
+. keep mat_adj*
+
+. drop if missing(mat_adj1)
+
+. rename (mat_adj1 mat_adj2 mat_adj3 mat_adj4 mat_adj5 mat_adj6 m
+&gt; at_adj7 mat_adj8 mat_adj9)(b se z p ll ul df crit eform)
+
+. g x=_n
+
+. replace b=log(b)
+
+. replace ll=log(ll)
+
+. replace ul=log(ul)
+
+. twoway (scatter b x if inrange(x,1,5)) || ///
+&gt;        (rcap ll ul x if inrange(x,1,5), ///
+&gt;                yline(0, lcol(lime)) ///
+&gt;                    ylab( ///
+&gt;                        -2.08 &quot;0.125&quot; ///
+&gt;                            -1.39 &quot;0.25&quot; ///
+&gt;                            -.69 &quot;0.5&quot; ///
+&gt;                              0 &quot;1&quot;  ///
+&gt;                            .69 &quot;2&quot; ///
+&gt;                            1.39 &quot;4&quot; ///
+&gt;                            2.08 &quot;8&quot; ///
+&gt;                            2.78 &quot;16&quot;) ///
+&gt;                    legend(off)  ///
+&gt;                 xlab( ///
+&gt;            1 &quot;$legend1&quot; ///
+&gt;                    2 &quot;$legend2&quot; ///
+&gt;                    3 &quot;$legend3&quot; ///
+&gt;                    4 &quot;$legend4&quot; ///
+&gt;                    5 &quot;$legend5&quot;) ///
+&gt;            xti(&quot;Self-Reported Health&quot;) ///
+&gt;                    ) 
+
+. graph export semipara_adj.png, replace 
+
+. graph save semipara_adj.gph, replace 
+
+. 
+. graph combine semipara_unadj.gph semipara_adj.gph, ///
+&gt;     ycommon ti(&quot;Hazard Ratio, 95%CI&quot;) 
+
+. graph export unadj_adj.png, replace 
+
+. 
+. 
+</code></pre>
+<p><img src="Graph2.svg" ></p>
+<p><strong>Extracting Parameters</strong></p>
+<pre><code>. 
+. cls 
+
+. use week7, clear
+
+. 
+. cls 
+
+. use week7, clear
+
+. replace riagendr=riagendr-1
+
+. stcox i.huq010 ridageyr riagendr, basesurv(s0)
+
+. keep s0 _t _t0 _st _d 
+
+. save s0, replace 
+
+. ereturn list 
+
+. matrix beta = e(b)
+
+. matrix vcov = e(V)
+
+. matrix SV = ( ///
+&gt;     0, ///
+&gt;         1, ///
+&gt;         0, ///
+&gt;         0, ///
+&gt;         0, ///
+&gt;         40, ///
+&gt;         1 ///
+&gt; )
+
+. matrix SV_ref = ( ///
+&gt;     0, ///
+&gt;         1, ///
+&gt;         0, ///
+&gt;         0, ///
+&gt;         0, ///
+&gt;         60, ///
+&gt;         1 ///
+&gt; )
+
+. //absolute risk
+. matrix risk_score = SV * beta'
+
+. matrix list risk_score
+
+. di exp(risk_score[1,1])
+
+. matrix var_prediction = SV * vcov * vcov'
+
+. matrix se_prediction = sqrt(var_prediction[1,1])
+
+. 
+. matrix risk_score_ref = SV_ref * beta'
+
+. matrix list risk_score_ref
+
+. di exp(risk_score_ref[1,1])
+
+. matrix var_prediction_ref = SV_ref * vcov * vcov'
+
+. matrix se_prediction_ref = sqrt(var_prediction_ref[1,1])
+
+. 
+. local hr = exp(risk_score_ref[1,1])/exp(risk_score[1,1])
+
+. di `hr'
+
+. 
+. //di &quot;We conclude that `exp(risk_score[1,1])'&quot;
+. 
+. //
+. g f0 = (1 - s0) * 100 
+
+. g f1_ = f0 * exp(risk_score[1,1])
+
+. line f1 _t , ///  
+&gt;     sort connect(step step) ///
+&gt;         legend(ring(0)) ///
+&gt;     ylab(0(5)20) xlab(0(5)20) ///
+&gt;     yti(&quot;&quot;) ///
+&gt;     ti(&quot;Scenario, %&quot;, pos(11)) ///
+&gt;     xti(&quot;Years&quot;) ///
+&gt;     note(&quot;40yo male who self-describes as being in good health&quot;
+&gt;  ///
+&gt;                   ,size(1.5) ///
+&gt;                 )
+
+. graph export scenario.png, replace
+
+. 
+. 
+</code></pre>
+<p><img src="Graph3.svg" ></p>
