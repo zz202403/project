@@ -68,4 +68,4 @@ lookfor follow
   ```
 
 ## Survival analysis: non-parametric, semi-parametric, parametric
-+ click [here](dyndoc.html) to view nonparametric and semiparametric risk estimates from Stata
++ click [here](dyndoc1.html) to view nonparametric and semiparametric risk estimates from Stata
