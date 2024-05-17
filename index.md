@@ -66,4 +66,6 @@ lookfor follow
   desc huq010
   codebook huq010
   ```
-+ Results and plots will be in the next section (week 7).
+
+## Survival analysis: non-parametric, semi-parametric, parametric
++ click [here](dyndoc.html) to view nonparametric and semiparametric risk estimates from Stata
